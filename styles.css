@@ -1,0 +1,113 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: lightslategray;
+  height: 100vh;
+  gap: 24px;
+  /* flex-direction: column; */
+}
+
+
+#container {
+  display: flex;
+  background-color: lightsteelblue;
+  width: 420px;
+  height: 640px;
+  border-radius: 20px;
+  /* border-style: none solid solid none;
+  border-width: 0 6px 8px 0;
+  border-color: rgb(50, 50, 50); */
+  border-style: solid;
+  border-width: 2px 6px 8px 4px;
+  border-color: white rgb(50, 50, 50) rgb(50, 50, 50) white;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+
+#display-window {
+  display: flex;
+  align-items: center;
+  justify-content: right;
+  background-color: rgb(50, 50, 50);
+  color: white;
+  font-size: 36px;
+  height: 86px;
+  padding: 12px;
+  margin: 24px;
+  border-style: solid;
+  border-width: 4px;
+  border-color: black white white black;
+  overflow: hidden;
+}
+
+.button-container {
+  margin-bottom: 24px;
+}
+
+.button-row {
+  display: flex;
+  justify-content: space-evenly;
+  margin-bottom: 12px;
+}
+
+.control-row {
+  border-style: solid;
+  border-width: 2px;
+  border-color: cornsilk;
+  padding: 12px 4px 12px 4px;
+  margin: 0px 28px 36px 28px;
+}
+
+.button {
+  background-color: cornsilk;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: black;
+  font-size: 24px;
+  font-weight: bold;
+  width: 72px;
+  height: 72px;
+  border-radius: 9px;
+  border-style: none solid solid none;
+  border-width: 0 2px 4px 0;
+  border-color: rgb(50, 50, 50);
+}
+
+.double-button {
+  width: 168px;
+}
+
+.button:hover {
+  background-color: rgb(216, 185, 117);
+}
+
+.button:active, .active-button {
+  background-color: rgb(185, 150, 117);
+  border-style: solid none none solid;
+  border-width: 4px 0 0 2px;
+}
+
+#log {
+  background-color: black;
+  width: 360px;
+  height: 640px;
+  border-style: solid;
+  border-color: white;
+  border-width: 1px;
+  font-size: 18px;
+  font-family: monospace;
+  color: white;
+  padding: 9px;
+  overflow: scroll;
+}
