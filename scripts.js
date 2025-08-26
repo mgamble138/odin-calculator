@@ -9,19 +9,7 @@ const EQUALS_INPUT = "=";
 const CLEAR_INPUT = "clr";
 const DELETE_INPUT = "del";
 const NEGATIVE_INPUT = "-/+";
-const DECIMAL_INPUT = "."
-
-const OPERATION_KEYS = [
-  ADD_INPUT,
-  SUBTRACT_INPUT,
-  MULTIPLY_INPUT,
-  DIVIDE_INPUT,
-  EQUALS_INPUT,
-  CLEAR_INPUT,
-  DELETE_INPUT,
-  NEGATIVE_INPUT,
-  DECIMAL_INPUT,
-];
+const DECIMAL_INPUT = ".";
 
 const OPERAND_KEYS = [
   ADD_INPUT,
@@ -30,53 +18,47 @@ const OPERAND_KEYS = [
   DIVIDE_INPUT,
 ];
 
-const OPERANDS = {
+const OPERAND_FUNCTIONS = {
   [ADD_INPUT]: add,
   [SUBTRACT_INPUT]: subtract,
   [MULTIPLY_INPUT]: multiply,
   [DIVIDE_INPUT]: divide
-}
+};
 
 const DECIMAL_PLACE_MAX = 8;
 
 const X_INDEX = 0;
 const OPERAND_INDEX = 1;
-
 const Y_INDEX = 2;
 const RESULT_INDEX = 3;
+const ERROR_STATE = 4;
 
+let currentState = X_INDEX;
 let args = ["0", null, null, null];
-let currentIndex = X_INDEX;
-let isError = false;
 
 
 /**
  * Main State Machine
  */
-function handleCurrentIndex(inputValue) {
-  if (isError) {
-    resetCalculator();
-    return;
-  }
-
-  const isNumber = buttonValueIsNumber(inputValue);
+function handleCurrentState(inputValue) {
+  const isNumber = keyIsNumber(inputValue);
   const isOperand = OPERAND_KEYS.includes(inputValue);
 
-  switch (currentIndex) {
+  switch (currentState) {
     case X_INDEX:
       if (inputValue === CLEAR_INPUT) {
         resetCalculator();
       } else if (inputValue === DELETE_INPUT) {
-        doDeleteKeyPress();
+        handleDeleteKey();
       } else if (inputValue === DECIMAL_INPUT) {
         addToArg(inputValue);
       } else if (inputValue === NEGATIVE_INPUT) {
-        doNegativeKeyPress();
+        handleNegativeKey();
       } else if (inputValue === EQUALS_INPUT) {
         // do nothing
       } else if (isOperand) {
         args[OPERAND_INDEX] = inputValue;
-        currentIndex = OPERAND_INDEX;
+        currentState = OPERAND_INDEX;
       } else if (isNumber) {
         addToArg(inputValue);
       }
@@ -86,9 +68,10 @@ function handleCurrentIndex(inputValue) {
       if (inputValue === CLEAR_INPUT) {
         resetCalculator();
       } else if (inputValue === DELETE_INPUT) {
-        // Do nothing
+        args[currentState] = null;
+        currentState = X_INDEX;
       } else if (inputValue === DECIMAL_INPUT) {
-        currentIndex = Y_INDEX;
+        currentState = Y_INDEX;
         addToArg(inputValue);
       } else if (inputValue === NEGATIVE_INPUT) {
         // Do nothing
@@ -97,7 +80,7 @@ function handleCurrentIndex(inputValue) {
       } else if (isOperand) {
         args[OPERAND_INDEX] = inputValue;
       } else if (isNumber) {
-        currentIndex = Y_INDEX;
+        currentState = Y_INDEX;
         addToArg(inputValue);
       }
       break;
@@ -106,19 +89,23 @@ function handleCurrentIndex(inputValue) {
       if (inputValue === CLEAR_INPUT) {
         resetCalculator();
       } else if (inputValue === DELETE_INPUT) {
-        doDeleteKeyPress();
+        handleDeleteKey();
       } else if (inputValue === DECIMAL_INPUT) {
         addToArg(inputValue);
       } else if (inputValue === NEGATIVE_INPUT) {
-        doNegativeKeyPress();
+        handleNegativeKey();
       } else if (inputValue === EQUALS_INPUT) {
         args[RESULT_INDEX] = operate();
-        currentIndex = RESULT_INDEX;
+        if (currentState != ERROR_STATE) {
+          currentState = RESULT_INDEX;
+        }
         logResult();
       } else if (isOperand) {
         args[RESULT_INDEX] = operate();
         logResult();
-        restartCalculator(inputValue);
+        if (currentState != ERROR_STATE) {
+          restartCalculator(inputValue);
+        }
       } else if (isNumber) {
         addToArg(inputValue);
       }
@@ -131,7 +118,7 @@ function handleCurrentIndex(inputValue) {
         // Do nothing
       } else if (inputValue === DECIMAL_INPUT) {
         args = ["0.", null, null, null];
-        currentIndex = X_INDEX;
+        currentState = X_INDEX;
       } else if (inputValue === NEGATIVE_INPUT) {
         // Do nothing
       } else if (inputValue === EQUALS_INPUT) {
@@ -140,12 +127,18 @@ function handleCurrentIndex(inputValue) {
         restartCalculator(inputValue);
       } else if (isNumber) {
         args = [inputValue, null, null, null];
-        currentIndex = X_INDEX;
+        currentState = X_INDEX;
+      }
+      break;
+
+    case ERROR_STATE:
+      if (keyIsOperation(inputValue)  || keyIsNumber(inputValue)) {
+        resetCalculator();
       }
       break;
 
     default:
-      // Invalid key
+      // Invalid state. This should not occur.
       break;
   }
 
@@ -175,7 +168,7 @@ function divide(x, y) {
   if (y != 0) {
     return Number((x / y).toFixed(DECIMAL_PLACE_MAX));
   } else {
-    isError = true;
+    currentState = ERROR_STATE;
     return "Cannot Divide By 0!"
   }
 }
@@ -186,7 +179,7 @@ function operate() {
   const y = Number(args[Y_INDEX]);
   const operand = args[OPERAND_INDEX];
 
-  return OPERANDS[operand](x, y);
+  return OPERAND_FUNCTIONS[operand](x, y);
 }
 
 
@@ -194,20 +187,20 @@ function operate() {
  * Input processing
  */
 function handleKeyboardInput(e) {
-  e.preventDefault();  // Prevent Firefox Quick Search
+  e.preventDefault();  // Prevent Firefox Quick Search from hijacking '/' key.
   let key = e.key;
-  let keyval = key;
+  let key_cleaned = key;
 
   if (key === "Escape") {
-    keyval = CLEAR_INPUT;
+    key_cleaned = CLEAR_INPUT;
   } else if (key === "Enter") {
-    keyval = EQUALS_INPUT;
+    key_cleaned = EQUALS_INPUT;
   } else if (key === "Backspace") {
-    keyval = DELETE_INPUT;
+    key_cleaned = DELETE_INPUT;
   }
 
-  if (OPERATION_KEYS.includes(keyval) || buttonValueIsNumber(keyval)) {
-    handleCurrentIndex(keyval);
+  if (keyIsOperation(key_cleaned) || keyIsNumber(key_cleaned)) {
+    handleCurrentState(key_cleaned);
     const el = document.querySelector(".button[data-keyval='" + key + "']");
     el.classList.add("active-button");
   }
@@ -216,29 +209,29 @@ function handleKeyboardInput(e) {
 
 function handleClickInput(e) {
   const button = e.target;
-  const val = getButtonValue(button);
-  handleCurrentIndex(val);
+  const val = getKeyValue(button);
+  handleCurrentState(val);
 }
 
 
-function doDeleteKeyPress() {
-  if (args[currentIndex]) {
-    if (args[currentIndex].length > 1 && args[currentIndex].charAt(0) != "-") {
-      args[currentIndex] = args[currentIndex].slice(0, -1);
+function handleDeleteKey() {
+  if (args[currentState]) {
+    if (args[currentState].length > 1 && args[currentState].charAt(0) != "-") {
+      args[currentState] = args[currentState].slice(0, -1);
     } else {
-      args[currentIndex] = "0";
+      args[currentState] = "0";
     }
   }
 }
 
 
-function doNegativeKeyPress() {
-  if (args[currentIndex]) {
-    let arg = Number(args[currentIndex]);
+function handleNegativeKey() {
+  if (args[currentState]) {
+    let arg = Number(args[currentState]);
     if (arg > 0) {
-      args[currentIndex] = "-" + args[currentIndex];
+      args[currentState] = "-" + args[currentState];
     } else if (arg < 0) {
-      args[currentIndex] = args[currentIndex].slice(1);
+      args[currentState] = args[currentState].slice(1);
     }
   }
 }
@@ -247,25 +240,41 @@ function doNegativeKeyPress() {
 /**
  * Input manipulation
  */
-function getButtonValue(button) {
+function getKeyValue(button) {
   return button.innerHTML;
 }
 
 
-function buttonValueIsNumber(buttonValue) {
+function keyIsNumber(buttonValue) {
   return Number(buttonValue) || buttonValue == 0;
 }
 
 
+function keyIsOperation(key) {
+  const operation_keys = [
+    ADD_INPUT,
+    SUBTRACT_INPUT,
+    MULTIPLY_INPUT,
+    DIVIDE_INPUT,
+    EQUALS_INPUT,
+    CLEAR_INPUT,
+    DELETE_INPUT,
+    NEGATIVE_INPUT,
+    DECIMAL_INPUT,
+  ];
+  return operation_keys.includes(key);
+}
+
+
 function addToArg(value) {
-  if (args[currentIndex] == "0" || args[currentIndex] === null) {
+  if (args[currentState] == "0" || args[currentState] === null) {
     if (value === DECIMAL_INPUT) {
-      args[currentIndex] = "0."
+      args[currentState] = "0."
     } else {
-      args[currentIndex] = value;
+      args[currentState] = value;
     }
   } else {
-    args[currentIndex] += value;
+    args[currentState] += value;
   }
 }
 
@@ -291,7 +300,7 @@ function logResult() {
   const operand = args[OPERAND_INDEX];
   const result = args[RESULT_INDEX];
 
-  const msg = `<p>> ${x} ${operand} ${y} = ${result}</p>`;
+  const msg = `<p>>  ${x} ${operand} ${y} = ${result}</p>`;
   const log = document.querySelector("#log");
   log.innerHTML += msg;
 }
@@ -303,14 +312,13 @@ function logResult() {
 function restartCalculator(nextOperand) {
   const newX = args[RESULT_INDEX];
   args = [newX, nextOperand, null, null];
-  currentIndex = Y_INDEX;
+  currentState = Y_INDEX;
 }
 
 
 function resetCalculator() {
   args = [0, null, null, null];
-  currentIndex = X_INDEX;
-  isError = false;
+  currentState = X_INDEX;
   const log = document.querySelector("#log");
   log.innerHTML = null;
 }
@@ -334,17 +342,17 @@ document.addEventListener("keydown", handleKeyboardInput);
 
 document.addEventListener("keyup", (e) => {
   let key = e.key;
-  let keyval = key;
+  let key_cleaned = key;
 
   if (key === "Escape") {
-    keyval = CLEAR_INPUT;
+    key_cleaned = CLEAR_INPUT;
   } else if (key === "Enter") {
-    keyval = EQUALS_INPUT;
+    key_cleaned = EQUALS_INPUT;
   } else if (key === "Backspace") {
-    keyval = DELETE_INPUT;
+    key_cleaned = DELETE_INPUT;
   }
 
-  if (OPERATION_KEYS.includes(keyval) || buttonValueIsNumber(keyval)) {
+  if (keyIsOperation(key_cleaned) || keyIsNumber(key_cleaned)) {
     const el = document.querySelector(".button[data-keyval='" + key + "']");
     el.classList.remove("active-button");
   }
